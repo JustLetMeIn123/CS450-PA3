@@ -17,6 +17,8 @@
 #error TIMER_FREQ <= 1000 recommended
 #endif
 
+struct list not_ready_list;
+
 /* Number of timer ticks since OS booted. */
 static int64_t ticks;
 
@@ -84,14 +86,35 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+bool less_func (const struct list_elem *a,
+                             const struct list_elem *b,
+                             void *aux) {
+    struct thread *thread_a = list_entry (a, struct thread, elem2);
+    struct thread *thread_b = list_entry (b, struct thread, elem2);
+    return thread_a->wait_time > thread_b->wait_time;
+}
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
   ASSERT (intr_get_level () == INTR_ON);
+
+  /*struct thread *curr = thread_current ();
+  enum intr_level old_level;
+
+  old_level = intr_disable ();
+  curr->wait_time = timer_ticks ();
+  
+  list_insert_ordered (&not_ready_list, &curr->elem2, less_func, NULL);
+
+  thread_block();
+
+  intr_set_level(old_level);*/
+
+  int64_t start = timer_ticks ();
+  
   while (timer_elapsed (start) < ticks) 
     thread_yield ();
 }
