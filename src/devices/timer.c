@@ -86,14 +86,6 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
-bool less_func (const struct list_elem *a,
-                             const struct list_elem *b,
-                             void *aux) {
-    struct thread *thread_a = list_entry (a, struct thread, elem2);
-    struct thread *thread_b = list_entry (b, struct thread, elem2);
-    return thread_a->wait_time > thread_b->wait_time;
-}
-
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
@@ -107,7 +99,7 @@ timer_sleep (int64_t ticks)
   old_level = intr_disable ();
   curr->wait_time = timer_ticks ();
   
-  list_insert_ordered (&not_ready_list, &curr->elem2, less_func, NULL);
+  list_push_back (&not_ready_list, &curr->elem2);
 
   thread_block();
 
