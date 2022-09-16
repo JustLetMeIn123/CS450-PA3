@@ -93,17 +93,28 @@ timer_sleep (int64_t ticks)
 {
   ASSERT (intr_get_level () == INTR_ON);
 
-  /*struct thread *curr = thread_current ();
+  struct thread *curr = thread_current();
   enum intr_level old_level;
 
   old_level = intr_disable ();
-  curr->wait_time = timer_ticks ();
+  curr->wait_time = timer_ticks() + ticks;
   
   list_push_back (&not_ready_list, &curr->elem2);
 
   thread_block();
 
-  intr_set_level(old_level);*/
+  intr_set_level(old_level);
+
+  for (&curr->elem2 = list_begin (&not_ready_list); &curr->elem2 != list_end (&not_ready_list);
+       &curr->elem2 = list_next (&curr->elem2))
+      {
+        if (curr->wait_time <= timer_ticks()) {
+          thread_unblock(curr);
+          thread_yield();
+        }
+
+      }
+
 
   int64_t start = timer_ticks ();
   
