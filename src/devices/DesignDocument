@@ -32,7 +32,14 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
- 
+
+* We created a not_ready_list struct in timer.c because we needed to create a list to push the threads into.
+* We created a current thread struct that will be used to be our current thread that we are dealing with. 
+* We use the current thread to set the wait time and check the number of ticks that have gone by for that particular thread 
+  to unblock it after blocking.
+* We added wait_time into the struct for thread in thread.h so that we could keep track of the number of ticks.
+* 
+
 ---- ALGORITHMS ----
  
 >> A2: Briefly describe what happens in a call to timer_sleep(),
