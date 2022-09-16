@@ -3,9 +3,14 @@
 
 #include <round.h>
 #include <stdint.h>
+#include <list.h>
 
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
+
+struct list not_ready_list;
+
+void not_ready_list_pop (void);
 
 void timer_init (void);
 void timer_calibrate (void);

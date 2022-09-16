@@ -1,3 +1,4 @@
+#include "devices/timer.h"
 #include "threads/thread.h"
 #include <debug.h>
 #include <stddef.h>
@@ -137,6 +138,18 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+
+  if (!list_empty(&not_ready_list))
+  {
+    struct list_elem *e = list_front(&not_ready_list);
+    struct thread *f = list_entry (e, struct thread, elem2);
+    if (f->wait_time <= timer_ticks())
+    {
+      thread_unblock (f);
+      list_pop_front(&not_ready_list);
+      //thread_yield();
+    }
+  }
 }
 
 /* Prints thread statistics. */
