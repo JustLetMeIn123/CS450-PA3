@@ -39,10 +39,10 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
   particular thread to unblock it after blocking.
 * We added int64_t wait_time; into the struct for thread in thread.h so that we could keep track of the number of ticks.
 * We added struct thread *t = thread_current (); in thread.c to create a new current thread for thread_tick function
-* struct list_elem *e; used in our loop to cycle through our list
+* struct list_elem *e = list_front(&not_ready_list); e is our list element that is inserted at the front of our list
 * struct thread *f = list_entry (e, struct thread, elem2); used to represent our current entry that will be used to evaluate
   if its wait time has the correct amount of ticks to be unblocked
-* 
+
 
 ---- ALGORITHMS ----
  
@@ -50,7 +50,7 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
 >> including the effects of the timer interrupt handler.
 * When timer_sleep() is called, we make sure that the interrupt handler is on and set the wait time of the current thread to the proper
   number of ticks. Then we push the thread into our not ready list and block it. We disable the interrupt handler at the end after the
-  thread has been blocked.
+  thread has been blocked. 
  
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
