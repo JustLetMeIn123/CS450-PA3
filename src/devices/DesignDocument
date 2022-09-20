@@ -33,28 +33,38 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-* We created a not_ready_list struct in timer.c because we needed to create a list to push the threads into.
-* We created a current thread struct that will be used to be our current thread that we are dealing with. 
-* We use the current thread to set the wait time and check the number of ticks that have gone by for that particular thread 
-  to unblock it after blocking.
-* We added wait_time into the struct for thread in thread.h so that we could keep track of the number of ticks.
+* list_init (&not_ready_list); in timer.c to create a list to push the threads into.
+* struct thread *curr = thread_current(); will be used to be our current thread that we are dealing with. 
+* curr->wait_time = timer_ticks() + ticks; to set the wait time and check the number of ticks that have gone by for that
+  particular thread to unblock it after blocking.
+* We added int64_t wait_time; into the struct for thread in thread.h so that we could keep track of the number of ticks.
+* We added struct thread *t = thread_current (); in thread.c to create a new current thread for thread_tick function
+* struct list_elem *e; used in our loop to cycle through our list
+* struct thread *f = list_entry (e, struct thread, elem2); used to represent our current entry that will be used to evaluate
+  if its wait time has the correct amount of ticks to be unblocked
 * 
 
 ---- ALGORITHMS ----
  
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
+* When timer_sleep() is called, we make sure that the interrupt handler is on and set the wait time of the current thread to the proper
+  number of ticks. Then we push the thread into our not ready list and block it. We disable the interrupt handler at the end after the
+  thread has been blocked.
  
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+* We only check to see when blocked threads have waited the right amount of time for them to sleep. 
  
 ---- SYNCHRONIZATION ----
  
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+* Disabling the interrupts will allow race conditions to be avoided when it is called simultaneously.
  
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+* We disable the interrupt at the end after the thread has been pushed into the list and blocked.
  
 ---- RATIONALE ----
  
