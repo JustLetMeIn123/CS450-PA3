@@ -157,16 +157,29 @@ thread_tick (void)
       
     }
   }*/
+  // struct list_elem *e;
+  // for (e = list_begin (&not_ready_list); e != list_end (&not_ready_list);
+  //   e = list_next (e))
+  // {
+  //   struct thread *f = list_entry (e, struct thread, elem2);
+  //   if (f->wait_time <= timer_ticks())
+  //   {
+  //     thread_unblock (f);
+  //     list_pop_front(&not_ready_list);
+  //   }
+  // }
   struct list_elem *e;
-  for (e = list_begin (&not_ready_list); e != list_end (&not_ready_list);
-    e = list_next (e))
+  for (e = list_begin (&not_ready_list); e != list_end (&not_ready_list); e = list_remove (e))
   {
     struct thread *f = list_entry (e, struct thread, elem2);
     if (f->wait_time <= timer_ticks())
     {
+      //printf ("%s\n", f->name);
       thread_unblock (f);
-      list_pop_front(&not_ready_list);
+      //printf ("unblocked\n");
     }
+    else
+      break;
   }
 
 }
