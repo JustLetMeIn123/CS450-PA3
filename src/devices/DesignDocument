@@ -70,4 +70,6 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
  
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
- 
+ Blocking it and keeping it in a list was the only feasible way we could think of. We decided to unblock it in timer_interrupt of timer.
+ because we need to check each thread that needs to be woken up after each tick. The clock is incremented in timer_interrupt. 
+ We couldn't come to an agreement about another design that would work so we chose this one because we believed it was the most efficient and cleanest approach.
