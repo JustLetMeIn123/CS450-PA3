@@ -10,8 +10,6 @@
 
 struct list not_ready_list;
 
-void not_ready_list_pop (void);
-
 void timer_init (void);
 void timer_calibrate (void);
 

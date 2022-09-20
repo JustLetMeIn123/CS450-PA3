@@ -33,28 +33,27 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-* list_init (&not_ready_list); in timer.c to create a list to push the threads into.
-* struct thread *curr = thread_current(); will be used to be our current thread that we are dealing with. 
-* curr->wait_time = timer_ticks() + ticks; to set the wait time and check the number of ticks that have gone by for that
-  particular thread to unblock it after blocking.
-* We added int64_t wait_time; into the struct for thread in thread.h so that we could keep track of the number of ticks.
-* We added struct thread *t = thread_current (); in thread.c to create a new current thread for thread_tick function
-* struct list_elem *e = list_front(&not_ready_list); e is our list element that is inserted at the front of our list
+* struct list not_ready_list; in timer.h to create a list to push the sleeping threads into.
+* struct thread *curr = thread_current(); in timer.c timer_sleep, the currently active thread we want to use to be slept. 
+* int64_t wait_time; in thread.h, field to set when the thread needs to be woken up.
+* struct list_elem *e = list_front(&not_ready_list); a list_elem that points to the head of the not_ready_list for iteration.
 * struct thread *f = list_entry (e, struct thread, elem2); used to represent our current entry that will be used to evaluate
-  if its wait time has the correct amount of ticks to be unblocked
+  if its wait time has the correct amount of ticks to be unblocked.
 
 
 ---- ALGORITHMS ----
  
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
-* When timer_sleep() is called, we make sure that the interrupt handler is on and set the wait time of the current thread to the proper
-  number of ticks. Then we push the thread into our not ready list and block it. We disable the interrupt handler at the end after the
-  thread has been blocked. 
+* When timer_sleep() is called, we disable interupts to ensure outside calls to the not_ready_list are not being made. During
+the time interupts are disabled, we get the current thread, set the wait_time field to when the thread should be woken up again,
+sleep the thread (block it), add the thread to the not_ready_list, and then enable interupts again. In thread_tick() we then
+loop through the threads that are ready to be woken up and wake them up (unblock them).
  
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
-* We only check to see when blocked threads have waited the right amount of time for them to sleep. 
+* We insert slept threads into the not_ready_list based on how early they can be woken up. We then only loop through the threads
+in the not_ready_list that are ready to be woken up.
  
 ---- SYNCHRONIZATION ----
  
@@ -64,12 +63,13 @@ Jackson Brantley <brantlja@dukes.jmu.edu>
  
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
-* We disable the interrupt at the end after the thread has been pushed into the list and blocked.
+* We disable interupts in timer_sleep().
  
 ---- RATIONALE ----
  
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
- Blocking it and keeping it in a list was the only feasible way we could think of. We decided to unblock it in timer_interrupt of timer.
- because we need to check each thread that needs to be woken up after each tick. The clock is incremented in timer_interrupt. 
- We couldn't come to an agreement about another design that would work so we chose this one because we believed it was the most efficient and cleanest approach.
+* Blocking the current thread and keeping it in a list was the only feasible way we could think of. We decided to unblock 
+it in thread_tick() of thread.c because we need to check the list of threads that need to be woken up after each tick.
+We couldn't come to an agreement about another design that would work so we chose this one because we believed it was
+the most efficient and cleanest approach.
