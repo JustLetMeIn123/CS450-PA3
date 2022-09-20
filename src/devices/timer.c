@@ -107,14 +107,14 @@ timer_sleep (int64_t ticks)
   curr->wait_time = timer_ticks() + ticks;
   
   list_insert_ordered (&not_ready_list, &curr->elem2, less_func, NULL);
-  //thread_block();
+  thread_block();
 
   intr_set_level(old_level);
 
-  int64_t start = timer_ticks ();
+  /*int64_t start = timer_ticks ();
   
   while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+    thread_yield ();*/
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -193,20 +193,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-
-  struct list_elem *e;
-  for (e = list_begin (&not_ready_list); e != list_end (&not_ready_list); e = list_remove (e))
-  {
-    struct thread *f = list_entry (e, struct thread, elem2);
-    if (f->wait_time > timer_ticks())
-    {
-      //printf ("%s\n", f->name);
-      //printf ("%lld %lld\n", f->wait_time, timer_ticks());
-      //thread_unblock (f);
-    }
-    else
-      break;
-  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
