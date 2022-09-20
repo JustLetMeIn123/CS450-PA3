@@ -139,20 +139,6 @@ thread_tick (void)
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
 
-  /*struct list_elem *e;
-  for (e = list_begin (&not_ready_list); e != list_end (&not_ready_list); e = list_remove (e))
-  {
-    struct thread *f = list_entry (e, struct thread, elem2);
-    if (f->wait_time <= timer_ticks())
-    {
-      //printf ("%s\n", f->name);
-      //thread_unblock (f);
-      //printf ("unblocked\n");
-    }
-    else
-      break;
-  }*/
-
 }
 
 /* Prints thread statistics. */
