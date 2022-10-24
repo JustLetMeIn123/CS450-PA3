@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <threads/synch.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -13,6 +14,13 @@ enum thread_status
     THREAD_BLOCKED,     /* Waiting for an event to trigger. */
     THREAD_DYING        /* About to be destroyed. */
   };
+
+enum process_status
+{
+   ALIVE,
+   DEAD,
+   EXITED
+};
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
@@ -93,6 +101,11 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list_elem elem2;              /* List element 2. */
+    struct list_elem child_elem;
+
+    enum process_status p_status;
+    struct thread *parent;
+    struct list children;
     int64_t wait_time;
 
 #ifdef USERPROG
@@ -108,6 +121,8 @@ struct thread
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 extern bool thread_mlfqs;
+
+struct semaphore mutex;
 
 void thread_init (void);
 void thread_start (void);

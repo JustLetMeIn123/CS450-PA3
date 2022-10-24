@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "userprog/syscall.h"
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
@@ -19,7 +20,7 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static bool load (char *cmdline, char *buff, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -41,7 +42,8 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+    palloc_free_page (fn_copy);
+  // wait for start_process to finish loading using a semaphore. If it does not, return -1
   return tid;
 }
 
@@ -54,15 +56,22 @@ start_process (void *file_name_)
   struct intr_frame if_;
   bool success;
 
+  char *buff;
+  char *fn_copy2 = palloc_get_page(0);
+  strlcpy (fn_copy2, file_name, PGSIZE);
+  char *token = strtok_r (fn_copy2, " ", &buff);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  success = load (token, buff, &if_.eip, &if_.esp);
+  // if success is false, up the global semaphore.
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  palloc_free_page(fn_copy2);
   if (!success) 
     thread_exit ();
 
@@ -88,6 +97,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // if child_tid is -1, return -1. If it is not -1, wait.
+  while (1);
   return -1;
 }
 
@@ -195,7 +206,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (char *token, char *buff, void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -206,7 +217,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (char *file_name, char *buff, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -302,7 +313,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (file_name, buff, esp))
     goto done;
 
   /* Start address. */
@@ -427,20 +438,75 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (char *token, char *buff, void **esp) 
 {
   uint8_t *kpage;
   bool success = false;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  int total_bytes = 0;
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
+      {
         *esp = PHYS_BASE;
+        int argc = 0;
+        while (token != NULL) {
+          //printf ("%s\n", token);
+          //printf ("%s\n", buff);
+          int len = strnlen(token, PGSIZE) + 1;
+          total_bytes += len;
+          *esp -= len;
+          strlcpy(*esp, token, len);
+          argc++;
+          token = strtok_r(NULL, " ", &buff);
+        }
+
+        int align = 0;
+        while (total_bytes % 4 != 0)
+        {
+          align++;
+          total_bytes++;
+        }
+        if (align != 0)
+        {
+          *esp -= align;
+          memset (*esp, 0, align);
+        }
+        total_bytes += sizeof(char *);
+        *esp -= sizeof(char *);
+        memset (*esp, 0, 1);
+
+        char *a_pointer = (char *) *esp;
+        int amt_added = 0;
+        while (argc > amt_added)
+        {
+          *esp -= sizeof(char *);
+          total_bytes += sizeof(char *);
+          *((char **) *esp) = a_pointer;
+          amt_added++;
+          a_pointer += (strlen(a_pointer) + 1);
+        }
+
+        char **first = (char **) *esp;
+        *esp -= sizeof(char *);
+        total_bytes += sizeof(char *);
+        *((char ***) *esp) = first;
+
+        *esp -= sizeof(int);
+        total_bytes += sizeof(int);
+        *(int *) (*esp) = argc;
+
+        *esp -= sizeof(int *);
+        total_bytes += sizeof(int *);
+        *(int *) (*esp) = 0;
+      }
       else
         palloc_free_page (kpage);
     }
+  printf("esp: 0x%08x\n", (unsigned int)*esp);
+  hex_dump((uintptr_t)*esp, *esp, total_bytes, true);
   return success;
 }
 
