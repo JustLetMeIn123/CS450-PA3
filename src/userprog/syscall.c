@@ -50,9 +50,9 @@ void check_valid_ptr (const void *pointer)
 
 void exit (int status)
 {
-    struct thread *cur = thread_current();
-    printf ("%s: exit(%d)\n", cur->name, status);
-    thread_exit();
+  struct thread *cur = thread_current();
+  printf ("%s: exit(%d)\n", cur->name, status);
+  thread_exit();
 }
 
 void
