@@ -20,7 +20,7 @@
 #include "threads/vaddr.h"
 
 static thread_func start_process NO_RETURN;
-static bool load (char *cmdline, char *buff, void (**eip) (void), void **esp);
+static bool load (char *full_name, char *cmdline, char *buff, void (**eip) (void), void **esp);
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -39,8 +39,12 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  char *buff;
+  char *fn_copy2 = palloc_get_page(0);
+  strlcpy (fn_copy2, file_name, PGSIZE);
+  char *token = strtok_r (fn_copy2, " ", &buff);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   // wait for start_process to finish loading using a semaphore. If it does not, return -1
@@ -69,7 +73,7 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (token, buff, &if_.eip, &if_.esp);
+  success = load (file_name, token, buff, &if_.eip, &if_.esp);
   // if success is false, up the global semaphore.
   if (!success)
     thread_current()->parent->load = false;
@@ -224,7 +228,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (char *token, char *buff, void **esp);
+static bool setup_stack (char *full_name, char *token, char *buff, void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -235,7 +239,7 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (char *file_name, char *buff, void (**eip) (void), void **esp) 
+load (char *full_name, char *file_name, char *buff, void (**eip) (void), void **esp) 
 {
   struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
@@ -331,7 +335,7 @@ load (char *file_name, char *buff, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (file_name, buff, esp))
+  if (!setup_stack (full_name, file_name, buff, esp))
     goto done;
 
   /* Start address. */
@@ -456,7 +460,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (char *token, char *buff, void **esp) 
+setup_stack (char *full_name, char *token, char *buff, void **esp) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -470,14 +474,26 @@ setup_stack (char *token, char *buff, void **esp)
       {
         *esp = PHYS_BASE;
         int argc = 0;
+        char *copy = palloc_get_page(0);
+        char *buff2;
+        strlcpy (copy, full_name, PGSIZE);
+
+        for (char *token2 = strtok_r (copy, " ", &buff2); token2 != NULL; token2 = strtok_r (NULL, " ", &buff2))
+          argc++;
+
+        int *argv[argc];
+        int i = 0;
         while (token != NULL) {
           //printf ("%s\n", token);
           //printf ("%s\n", buff);
           int len = strnlen(token, PGSIZE) + 1;
           total_bytes += len;
           *esp -= len;
+          argv[i] = *esp;
+          //printf ("%d\n", *argv[i]);
+          i++;
+          //argc++;
           strlcpy(*esp, token, len);
-          argc++;
           token = strtok_r(NULL, " ", &buff);
         }
 
@@ -496,15 +512,21 @@ setup_stack (char *token, char *buff, void **esp)
         *esp -= sizeof(char *);
         memset (*esp, 0, 1);
 
-        char *a_pointer = (char *) *esp;
+        /*char *a_pointer = (char *) *esp;
         int amt_added = 0;
         while (argc > amt_added)
         {
           *esp -= sizeof(char *);
           total_bytes += sizeof(char *);
-          *((char **) *esp) = a_pointer;
+          memcpy(*esp, &a_pointer, sizeof(char *));
           amt_added++;
-          a_pointer += (strlen(a_pointer) + 1);
+          a_pointer += (strnlen(a_pointer, PGSIZE) + 1);
+        }*/
+        for(i = argc - 1; i >= 0; i--)
+        {
+          *esp -= sizeof(char *);
+          total_bytes += sizeof(char *);
+          memcpy(*esp, &argv[i], sizeof(char *));
         }
 
         char **first = (char **) *esp;
@@ -519,12 +541,14 @@ setup_stack (char *token, char *buff, void **esp)
         *esp -= sizeof(int *);
         total_bytes += sizeof(int *);
         *(int *) (*esp) = 0;
+
+        palloc_free_page (copy);
       }
       else
         palloc_free_page (kpage);
     }
-  printf("esp: 0x%08x\n", (unsigned int)*esp);
-  hex_dump((uintptr_t)*esp, *esp, total_bytes, true);
+  //printf("esp: 0x%08x\n", (unsigned int)*esp);
+  //hex_dump((uintptr_t)*esp, *esp, total_bytes, true);
   return success;
 }
 
