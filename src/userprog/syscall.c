@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <list.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/vaddr.h"
@@ -15,17 +16,22 @@
 
 static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *pointer);
-struct thread* get_child(tid_t tid, struct list *threads);
 void exit (int status);
 void write (struct intr_frame *f, void *esp);
 
 struct thread*
 get_child(tid_t tid, struct list *threads)
 {
+  if (!is_user_vaddr((const void*) threads))
+    return NULL;
+  void *check = pagedir_get_page(thread_current()->pagedir, (const void*) threads);
+  if (check == NULL)
+    return NULL;
   struct list_elem *e;
   for (e = list_begin (threads); e != list_end (threads); e = list_next (e))
   {
     struct thread* child = list_entry (e, struct thread, child_elem);
+    
     if(child->tid == tid)
     {
       return child;
@@ -51,7 +57,9 @@ void check_valid_ptr (const void *pointer)
 void exit (int status)
 {
   struct thread *cur = thread_current();
+  cur->p_status = DEAD;
   printf ("%s: exit(%d)\n", cur->name, status);
+  sema_up (&mutex);
   thread_exit();
 }
 

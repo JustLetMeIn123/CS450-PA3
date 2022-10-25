@@ -44,6 +44,9 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   // wait for start_process to finish loading using a semaphore. If it does not, return -1
+  sema_down (&thread_current()->c_lock);
+  if (!thread_current()->load)
+    return -1;
   return tid;
 }
 
@@ -68,6 +71,11 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (token, buff, &if_.eip, &if_.esp);
   // if success is false, up the global semaphore.
+  if (!success)
+    thread_current()->parent->load = false;
+  else
+    thread_current()->parent->load = true;
+  sema_up (&thread_current()->parent->c_lock);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -98,7 +106,17 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   // if child_tid is -1, return -1. If it is not -1, wait.
-  while (1);
+  if (child_tid == -1)
+    return -1;
+
+  struct thread *child = get_child(child_tid, &thread_current()->children);
+  if (child == NULL)
+    return -1;
+  if (!child->wait_called){
+    child->wait_called = true;
+    sema_down (&mutex);
+    return child->p_status;
+  }
   return -1;
 }
 

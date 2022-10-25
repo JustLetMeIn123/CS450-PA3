@@ -104,6 +104,9 @@ struct thread
     struct list_elem child_elem;
 
     enum process_status p_status;
+    bool wait_called;
+    bool load;
+    struct semaphore c_lock;
     struct thread *parent;
     struct list children;
     int64_t wait_time;
@@ -123,6 +126,7 @@ struct thread
 extern bool thread_mlfqs;
 
 struct semaphore mutex;
+struct semaphore load_sem;
 
 void thread_init (void);
 void thread_start (void);

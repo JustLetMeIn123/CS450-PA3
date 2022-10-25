@@ -94,6 +94,7 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   sema_init (&mutex, 0);
+  sema_init (&load_sem, 0);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -206,6 +207,7 @@ thread_create (const char *name, int priority,
   struct thread* child = t;
   list_push_back(&thread_current()->children, &child->child_elem);
   t->parent = thread_current();
+  t->wait_called = false;
 
   old_level = intr_disable ();
 
@@ -491,6 +493,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  sema_init(&t->c_lock, 0);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
