@@ -511,17 +511,7 @@ setup_stack (char *full_name, char *token, char *buff, void **esp)
         total_bytes += sizeof(char *);
         *esp -= sizeof(char *);
         memset (*esp, 0, 1);
-
-        /*char *a_pointer = (char *) *esp;
-        int amt_added = 0;
-        while (argc > amt_added)
-        {
-          *esp -= sizeof(char *);
-          total_bytes += sizeof(char *);
-          memcpy(*esp, &a_pointer, sizeof(char *));
-          amt_added++;
-          a_pointer += (strnlen(a_pointer, PGSIZE) + 1);
-        }*/
+        
         for(i = argc - 1; i >= 0; i--)
         {
           *esp -= sizeof(char *);

@@ -23,10 +23,10 @@ void read (struct intr_frame *f, void *esp);
 struct thread*
 get_child(tid_t tid, struct list *threads)
 {
-  if (!is_user_vaddr((const void*) threads))
+  if (!is_user_vaddr ((const void*) threads))
     return NULL;
-  void *check = pagedir_get_page(thread_current()->pagedir, (const void*) threads);
-  if (check == NULL)
+  void *point = pagedir_get_page(thread_current()->pagedir, (const void*) threads);
+  if (point == NULL)
     return NULL;
   struct list_elem *e;
   for (e = list_begin (threads); e != list_end (threads); e = list_next (e))
@@ -34,34 +34,63 @@ get_child(tid_t tid, struct list *threads)
     struct thread* child = list_entry (e, struct thread, child_elem);
     
     if(child->tid == tid)
-    {
       return child;
-    }
   }
   return NULL;
 }
 
 void check_valid_ptr (const void *pointer)
 {
-    if (!is_user_vaddr(pointer))
-    {
+    if (!is_user_vaddr (pointer))
         exit(-1);
-    }
 
-    void *check = pagedir_get_page(thread_current()->pagedir, pointer);
-    if (check == NULL)
-    {
+    void *point = pagedir_get_page(thread_current ()->pagedir, pointer);
+    if (point == NULL)
         exit(-1);
-    }
 }
 
 void exit (int status)
 {
-  struct thread *cur = thread_current();
+  struct thread *cur = thread_current ();
   cur->p_status = DEAD;
   printf ("%s: exit(%d)\n", cur->name, status);
   sema_up (&mutex);
-  thread_exit();
+  thread_exit ();
+}
+
+void
+read (struct intr_frame *f, void *esp)
+{
+  int argv = *((int*) esp);
+
+  if (argv == 0)
+    f->eax = input_getc ();
+  else
+    exit (-1);
+}
+
+void
+write (struct intr_frame *f, void *esp)
+{
+  int argv = *((int*) esp);
+  esp += 4;
+  int arg1 = *((int*) esp);
+  esp += 4;
+  int arg2 = *((int*) esp);
+  esp += 4;
+
+  check_valid_ptr ((const void*) arg1);
+  void *temp = ((void*) arg1)+ arg2 ;
+  check_valid_ptr ((const void*) temp);
+
+  uint8_t * buffer = (uint8_t *) (void *) arg1;
+  if (argv == 1)
+  {
+    putbuf ((char *)buffer, (unsigned) arg2);
+    f->eax = (int)(unsigned) arg2;
+  }
+  else
+    exit(-1);
 }
 
 void
@@ -73,11 +102,11 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  check_valid_ptr((const void*) f -> esp);
+  check_valid_ptr ((const void*) f -> esp);
   int *esp = f->esp;
   int number = *esp;
   esp += 1;
-  check_valid_ptr((const void*) esp);
+  check_valid_ptr ((const void*) esp);
   if (number == SYS_EXIT) {
     exit (*esp);
   }
@@ -89,55 +118,5 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
   else {
     shutdown_power_off();
-  }
-}
-
-void
-read (struct intr_frame *f, void *esp)
-{
-  int argv = *((int*) esp);
-  esp += 4;
-  int argv_1 = *((int*) esp);
-  esp += 4;
-  int argv_2 = *((int*) esp);
-  esp += 4;
-
-  check_valid_ptr ((const void*) argv_1);
-  void * temp = ((void*) argv_1)+ argv_2 ;
-  check_valid_ptr ((const void*) temp);
-
-  if (argv == 0)
-  {
-    f->eax = input_getc ();
-  }
-  else
-  {
-    exit (-1);
-  }
-}
-
-void
-write (struct intr_frame *f, void *esp)
-{
-  int argv = *((int*) esp);
-  esp += 4;
-  int argv_1 = *((int*) esp);
-  esp += 4;
-  int argv_2 = *((int*) esp);
-  esp += 4;
-
-  check_valid_ptr ((const void*) argv_1);
-  void *temp = ((void*) argv_1)+ argv_2 ;
-  check_valid_ptr((const void*) temp);
-
-  uint8_t * buffer = (uint8_t *) (void *) argv_1;
-  if (argv == 1)
-  {
-    putbuf((char *)buffer, (unsigned) argv_2);
-    f->eax = (int)(unsigned) argv_2;
-  }
-  else
-  {
-    exit(-1);
   }
 }
