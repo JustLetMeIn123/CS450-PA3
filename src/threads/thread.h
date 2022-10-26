@@ -126,7 +126,6 @@ struct thread
 extern bool thread_mlfqs;
 
 struct semaphore mutex;
-struct semaphore load_sem;
 
 void thread_init (void);
 void thread_start (void);

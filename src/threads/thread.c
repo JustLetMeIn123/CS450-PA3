@@ -94,7 +94,6 @@ thread_init (void)
   list_init (&ready_list);
   list_init (&all_list);
   sema_init (&mutex, 0);
-  sema_init (&load_sem, 0);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();

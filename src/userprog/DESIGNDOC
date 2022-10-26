@@ -105,8 +105,12 @@ struct semaphore mutex;
 >> How do you avoid overflowing the stack page?
 
 
-We implemented Argument passing by in setup_stack tokenizing the command and pushing each argument onto the stack. We then
-add 
+We implement argument passing by tokenizing the command given by spaces and pushing each token (argument) onto the stack one by one, keeping track of the address of each argument in an array. We then check how many arguments were added and push the stack down until the size is a multiple of four, followed by a null character. We then loop through the array with the address of the arguments and push each address on the stack in reverse order. We then push argv, then argc onto the stack. Finally, we push the fake return address of 0 onto the stack.
+
+We arrange for the elements of argv to be in the right order by adding them to an array, and when we push the elements of the array onto the stack we do so in reverse order so that argv[0] is the lowest.
+
+We avoid overflowing the stack page by ensuring each argument has a length no greater than PGSIZE.
+
 
 ---- RATIONALE ----
 
