@@ -1,0 +1,128 @@
+            +----------------------------+
+
+            |          CS 450            |
+
+            | PROJECT 2: USER PROGRAMS I |
+
+            |      DESIGN DOCUMENT             |
+
+            +----------------------------+
+
+
+
+---- GROUP ----
+
+
+
+>> Fill in the names and email addresses of your group members.
+
+
+
+Alex Cronin <croninja@dukes.jmu.edu>
+
+Jackson Brantley <brantlja@dukes.jmu.edu>
+
+Justin Park <park3jw@dukes.jmu.edu>
+
+
+
+---- PRELIMINARIES ----
+
+
+
+>> If you have any preliminary comments on your submission, please give 
+
+>> them here.
+
+
+
+>> Please cite any offline or online sources you consulted while
+
+>> preparing your submission, other than the Pintos documentation, course
+
+>> text, lecture notes, and course staff.
+
+
+
+                          ARGUMENT PASSING
+
+                          ================
+
+
+
+---- DATA STRUCTURES ----
+
+
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+
+>> `struct' member, global or static variable, `typedef', or
+
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+enum process_status
+{
+   ALIVE,
+   DEAD,
+   EXITED
+}; 
+-  The purpose of the enum process_status is used to keep track of the process of each thread and see if the thread has been exited.
+
+struct list_elem child_elem;
+- The purpose of this struct within the threads is to loop over the list of threads to get a thread with a certain thread ID
+
+struct semaphore c_lock;
+- The purpose of this semaphore within the thread struct is used to notify process_execute that the loading was finished
+
+struct thread *parent;
+- This struct is a pointer to the parent thread
+
+struct list children;
+- This struct is a list for all the child threads
+
+bool load;
+- This boolean variable is used to notify process_execute if load was successful
+
+bool wait_called;
+- This boolean variable is used to notify process_wait if the thread has already been waited on
+
+struct semaphore mutex;
+- This semaphore is used to notify process_wait if the thread has finished running
+
+
+
+
+
+
+---- ALGORITHMS ----
+
+
+
+>> A2: Briefly describe how you implemented argument parsing.  How do
+
+>> you arrange for the elements of argv[] to be in the right order?
+
+>> How do you avoid overflowing the stack page?
+
+
+We implemented Argument passing by in setup_stack tokenizing the command and pushing each argument onto the stack. We then
+add 
+
+---- RATIONALE ----
+
+
+
+>> A3: Why does Pintos implement strtok_r() but not strtok()?
+
+
+
+>> A4: In Pintos, the kernel separates commands into a executable name
+
+>> and arguments.  In Unix-like systems, the shell does this
+
+>> separation.  Identify at least two advantages of the Unix approach.
+
+
+Strtok_r is a reentrant function that allows multiple threads to utilize strtok_r simultaneously. We want to use the reentrant version of the function because if there is an interrupt then we want to service the interruption without stopping the earlier course of action.
+
+An advantage of utilizing the shell for separating commands into executable names is division of labor. Since the shell is essentially a command line interface, it is efficient and organized for the shell to separate these names into different components since it relates more to the shell. Another advantage of utilizing the shell for separating commands into executable names is that it saves time and resources of the kernel that could be put into different aspects of the operating system. Since the kernel is responsible for basic services, the kernel could focus more on operations of that aspect.
