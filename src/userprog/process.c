@@ -119,7 +119,7 @@ process_wait (tid_t child_tid UNUSED)
   if (!child->wait_called){
     child->wait_called = true;
     sema_down (&mutex);
-    return child->p_status;
+    return child->status;
   }
   return -1;
 }

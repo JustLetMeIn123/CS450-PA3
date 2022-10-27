@@ -15,13 +15,6 @@ enum thread_status
     THREAD_DYING        /* About to be destroyed. */
   };
 
-enum process_status
-{
-   ALIVE,
-   DEAD,
-   EXITED
-};
-
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
 typedef int tid_t;
@@ -103,7 +96,6 @@ struct thread
     struct list_elem elem2;              /* List element 2. */
     struct list_elem child_elem;
 
-    enum process_status p_status;
     bool wait_called;
     bool load;
     struct semaphore c_lock;

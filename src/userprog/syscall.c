@@ -38,7 +38,6 @@ get_child(tid_t tid, struct list *threads)
 void exit (int status)
 {
   struct thread *cur = thread_current ();
-  cur->p_status = DEAD;
   printf ("%s: exit(%d)\n", cur->name, status);
   sema_up (&mutex);
   thread_exit ();
