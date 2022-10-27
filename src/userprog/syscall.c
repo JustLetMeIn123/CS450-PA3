@@ -96,6 +96,6 @@ syscall_handler (struct intr_frame *f UNUSED)
     write (f, esp);
   }
   else {
-    shutdown_power_off();
+    shutdown_power_off ();
   }
 }

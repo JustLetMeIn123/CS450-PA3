@@ -116,7 +116,8 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child = get_child(child_tid, &thread_current()->children);
   if (child == NULL)
     return -1;
-  if (!child->wait_called){
+  if (!child->wait_called)
+  {
     child->wait_called = true;
     sema_down (&mutex);
     return child->status;
