@@ -60,14 +60,6 @@ Justin Park <park3jw@dukes.jmu.edu>
 
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-enum process_status
-{
-   ALIVE,
-   DEAD,
-   EXITED
-}; 
--  The purpose of the enum process_status is used to keep track of the process of each thread and see if the thread has been exited.
-
 struct list_elem child_elem;
 - The purpose of this struct within the threads is to loop over the list of threads to get a thread with a certain thread ID
 
