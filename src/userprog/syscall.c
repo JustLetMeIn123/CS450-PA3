@@ -15,7 +15,6 @@
 #include "userprog/pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
-void check_valid_ptr (const void *pointer);
 void exit (int status);
 void write (struct intr_frame *f, void *esp);
 void read (struct intr_frame *f, void *esp);
@@ -24,9 +23,6 @@ struct thread*
 get_child(tid_t tid, struct list *threads)
 {
   if (!is_user_vaddr ((const void*) threads))
-    return NULL;
-  void *point = pagedir_get_page(thread_current()->pagedir, (const void*) threads);
-  if (point == NULL)
     return NULL;
   struct list_elem *e;
   for (e = list_begin (threads); e != list_end (threads); e = list_next (e))
@@ -37,16 +33,6 @@ get_child(tid_t tid, struct list *threads)
       return child;
   }
   return NULL;
-}
-
-void check_valid_ptr (const void *pointer)
-{
-    if (!is_user_vaddr (pointer))
-        exit(-1);
-
-    void *point = pagedir_get_page(thread_current ()->pagedir, pointer);
-    if (point == NULL)
-        exit(-1);
 }
 
 void exit (int status)
@@ -79,10 +65,6 @@ write (struct intr_frame *f, void *esp)
   int arg2 = *((int*) esp);
   esp += 4;
 
-  check_valid_ptr ((const void*) arg1);
-  void *temp = ((void*) arg1)+ arg2 ;
-  check_valid_ptr ((const void*) temp);
-
   uint8_t * buffer = (uint8_t *) (void *) arg1;
   if (argv == 1)
   {
@@ -102,11 +84,9 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  check_valid_ptr ((const void*) f -> esp);
   int *esp = f->esp;
   int number = *esp;
   esp += 1;
-  check_valid_ptr ((const void*) esp);
   if (number == SYS_EXIT) {
     exit (*esp);
   }
