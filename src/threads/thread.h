@@ -95,7 +95,6 @@ struct thread
     struct list_elem elem;              /* List element. */
     struct list_elem elem2;              /* List element 2. */
     struct list_elem child_elem;
-    struct list_elem file_elem;
 
     bool wait_called;
     bool load;
@@ -116,6 +115,13 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct file_info
+{
+   int fd;
+   struct file *this_file;
+   struct list_elem file_elem;
+};
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

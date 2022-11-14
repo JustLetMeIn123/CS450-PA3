@@ -20,6 +20,7 @@ void write (struct intr_frame *f, int fd, const void *buffer, unsigned size);
 void read (struct intr_frame *f, int fd, const void *buffer, unsigned size);
 void valid_ptr (const void *pointer);
 void call_with_3 (struct intr_frame *f, void *esp, int call);
+struct file_info* get_file (int fd);
 struct lock f_lock;
 
 void valid_ptr (const void *pointer)
@@ -32,8 +33,7 @@ void valid_ptr (const void *pointer)
     exit(-1);
 }
 
-struct thread*
-get_child(tid_t tid, struct list *threads)
+struct thread* get_child(tid_t tid, struct list *threads)
 {
   if (!is_user_vaddr ((const void*) threads))
     return NULL;
@@ -45,6 +45,19 @@ get_child(tid_t tid, struct list *threads)
     if(child->tid == tid)
       return child;
   }
+  return NULL;
+}
+
+struct file_info* get_file (int fd)
+{
+  struct list_elem *e;
+  for (e = list_begin (&thread_current() -> files); e != list_end (&thread_current() -> files);
+       e = list_next (e))
+  {
+    struct file_info *elem = list_entry (e, struct file_info, file_elem);
+    if(elem -> fd == fd)
+      return elem;
+    }
   return NULL;
 }
 
