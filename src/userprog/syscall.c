@@ -16,8 +16,21 @@
 
 static void syscall_handler (struct intr_frame *);
 void exit (int status);
-void write (struct intr_frame *f, void *esp);
-void read (struct intr_frame *f, void *esp);
+void write (struct intr_frame *f, int fd, const void *buffer, unsigned size);
+void read (struct intr_frame *f, int fd, const void *buffer, unsigned size);
+void valid_ptr (const void *pointer);
+void call_with_3 (struct intr_frame *f, void *esp, int call);
+struct lock f_lock;
+
+void valid_ptr (const void *pointer)
+{
+  if (!is_user_vaddr(pointer))
+    exit(-1);
+
+  void *check = pagedir_get_page(thread_current()->pagedir, pointer);
+  if (check == NULL)
+    exit(-1);
+}
 
 struct thread*
 get_child(tid_t tid, struct list *threads)
@@ -35,27 +48,7 @@ get_child(tid_t tid, struct list *threads)
   return NULL;
 }
 
-void exit (int status)
-{
-  struct thread *cur = thread_current ();
-  printf ("%s: exit(%d)\n", cur->name, status);
-  sema_up (&mutex);
-  thread_exit ();
-}
-
-void
-read (struct intr_frame *f, void *esp)
-{
-  int argv = *((int*) esp);
-
-  if (argv == 0)
-    f->eax = input_getc ();
-  else
-    exit (-1);
-}
-
-void
-write (struct intr_frame *f, void *esp)
+void call_with_3 (struct intr_frame *f, void *esp, int call)
 {
   int argv = *((int*) esp);
   esp += 4;
@@ -64,11 +57,39 @@ write (struct intr_frame *f, void *esp)
   int arg2 = *((int*) esp);
   esp += 4;
 
-  uint8_t * buffer = (uint8_t *) (void *) arg1;
-  if (argv == 1)
+  valid_ptr ((const void *) arg1);
+  if (call == SYS_WRITE)
+    write (f, argv, (void *) arg1, (unsigned) arg2);
+  else
+    read (f, argv, (void *) arg1, (unsigned) arg2);
+}
+
+void exit (int status)
+{
+  struct thread *cur = thread_current ();
+  printf ("%s: exit(%d)\n", cur->name, status);
+  //sema_up (&mutex);
+  sema_up (&cur -> l_lock);
+  thread_exit ();
+}
+
+void
+read (struct intr_frame *f, int fd, const void *buffer, unsigned size)
+{
+  if (fd == 0)
+    f->eax = input_getc ();
+  else
+    exit (-1);
+}
+
+void
+write (struct intr_frame *f, int fd, const void *buffer, unsigned size)
+{
+  uint8_t *buff = (uint8_t *) buffer;
+  if (fd == 1)
   {
-    putbuf ((char *)buffer, (unsigned) arg2);
-    f->eax = (int)(unsigned) arg2;
+    putbuf ((char *)buff, size);
+    f->eax = (int)size;
   }
   else
     exit(-1);
@@ -78,22 +99,28 @@ void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  lock_init(&f_lock);
 }
 
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
   int *esp = f->esp;
+  valid_ptr ((const void *) esp);
   int number = *esp;
   esp += 1;
-  if (number == SYS_EXIT) {
+  valid_ptr ((const void *) esp);
+  if (number == SYS_HALT) {
+    shutdown_power_off();
+  }
+  else if (number == SYS_EXIT) {
     exit (*esp);
   }
   else if (number == SYS_READ) {
-    read (f, esp);
+    call_with_3 (f, esp, SYS_READ);
   }
   else if (number == SYS_WRITE) {
-    write (f, esp);
+    call_with_3 (f, esp, SYS_WRITE);
   }
   else {
     shutdown_power_off ();

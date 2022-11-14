@@ -491,8 +491,12 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->file_size = 1;
+  t->curr_file = NULL;
+  list_init (&t->files);
   t->magic = THREAD_MAGIC;
   sema_init(&t->c_lock, 0);
+  sema_init(&t->l_lock, 0);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

@@ -95,13 +95,18 @@ struct thread
     struct list_elem elem;              /* List element. */
     struct list_elem elem2;              /* List element 2. */
     struct list_elem child_elem;
+    struct list_elem file_elem;
 
     bool wait_called;
     bool load;
     struct semaphore c_lock;
+    struct semaphore l_lock;
     struct thread *parent;
     struct list children;
     int64_t wait_time;
+    struct list files;
+    int file_size;
+    struct file *curr_file;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
