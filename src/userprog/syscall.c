@@ -16,8 +16,8 @@
 
 static void syscall_handler (struct intr_frame *);
 void exit (int status);
-void write (struct intr_frame *f, int fd, const void *buffer, unsigned size);
-void read (struct intr_frame *f, int fd, const void *buffer, unsigned size);
+void write (struct intr_frame *f, int fd, void *buffer, unsigned size);
+void read (struct intr_frame *f, int fd, void *buffer, unsigned size);
 void valid_ptr (const void *pointer);
 void call_with_3 (struct intr_frame *f, void *esp, int call);
 struct file_info* get_file (int fd);
@@ -87,16 +87,35 @@ void exit (int status)
 }
 
 void
-read (struct intr_frame *f, int fd, const void *buffer, unsigned size)
+read (struct intr_frame *f, int fd, void *buffer, unsigned size)
 {
   if (fd == 0)
     f->eax = input_getc ();
+  else if (fd > 0)
+  {
+    struct file_info *fileI = get_file (fd);
+    if (fileI == NULL || buffer == NULL)
+    {
+      f->eax = -1;
+      return;
+    }
+    struct file *thisFile = fileI->this_file;
+    lock_acquire (&f_lock);
+    int val = file_read (thisFile, buffer, size);
+    f->eax = val;
+    lock_release (&f_lock);
+    if(val < (int)size && val != 0)
+    {
+      f->eax = -1;
+      return;
+    }
+  }
   else
     exit (-1);
 }
 
 void
-write (struct intr_frame *f, int fd, const void *buffer, unsigned size)
+write (struct intr_frame *f, int fd, void *buffer, unsigned size)
 {
   uint8_t *buff = (uint8_t *) buffer;
   if (fd == 1)
@@ -105,7 +124,19 @@ write (struct intr_frame *f, int fd, const void *buffer, unsigned size)
     f->eax = (int)size;
   }
   else
-    exit(-1);
+  {
+    struct file_info *fileI = get_file (fd);
+    if (fileI == NULL || buffer == NULL)
+    {
+      f->eax = -1;
+      return;
+    }
+    struct file *thisFile = fileI->this_file;
+    lock_acquire (&f_lock);
+    int val = file_write (thisFile, buffer, size);
+    f->eax = val;
+    lock_release (&f_lock);
+  }
 }
 
 void
