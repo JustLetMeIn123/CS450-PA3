@@ -74,44 +74,44 @@ struct file_info* get_file (int fd)
 
 void call_with_1 (struct intr_frame *f, int choose, void *esp)
 {
-    int argv = *((int*) esp);
-    esp += 4;
+  int argv = *((int*) esp);
+  esp += 4;
 
-    if (choose == SYS_EXIT)
-    {
-        exit(argv);
-    }
-    else if (choose == SYS_EXEC)
-    {
-        valid_ptr((const void*) argv);
-        f -> eax = exec((const char *)argv);
-    }
-    else if (choose == SYS_WAIT)
-    {
-        f -> eax = wait(argv);
-    }
-    else if (choose == SYS_REMOVE)
-    {
-        valid_ptr((const void*) argv);
-        f -> eax = remove((const char *) argv);
-    }
-    else if(choose == SYS_OPEN)
-    {
-        valid_ptr((const void*) argv);
-        f -> eax = open((const char *) argv);
-    }
-    else if (choose == SYS_FILESIZE)
-    {
-        f -> eax = filesize(argv);
-    }
-    else if (choose == SYS_TELL)
-    {
-        f -> eax = tell(argv);
-    }
-    else if (choose == SYS_CLOSE)
-    {
-        close(argv);
-    }
+  if (choose == SYS_EXIT)
+  {
+    exit(argv);
+  }
+  else if (choose == SYS_EXEC)
+  {
+    valid_ptr((const void*) argv);
+    f -> eax = exec((const char *)argv);
+  }
+  else if (choose == SYS_WAIT)
+  {
+    f -> eax = wait(argv);
+  }
+  else if (choose == SYS_REMOVE)
+  {
+    valid_ptr((const void*) argv);
+    f -> eax = remove((const char *) argv);
+  }
+  else if(choose == SYS_OPEN)
+  {
+    valid_ptr((const void*) argv);
+    f -> eax = open((const char *) argv);
+  }
+  else if (choose == SYS_FILESIZE)
+  {
+    f -> eax = filesize(argv);
+  }
+  else if (choose == SYS_TELL)
+  {
+    f -> eax = tell(argv);
+  }
+  else if (choose == SYS_CLOSE)
+  {
+    close(argv);
+  }
 }
 
 void call_with_3 (struct intr_frame *f, void *esp, int call)
@@ -164,97 +164,97 @@ write (struct intr_frame *f, int fd, const void *buffer, unsigned size)
 tid_t
 exec (const char *cmd_line)
 {
-    struct thread* parent = thread_current();
-    tid_t pid = -1;
-    // create child process to execute cmd
-    pid = process_execute(cmd_line);
+  struct thread* parent = thread_current();
+  tid_t pid = -1;
+  // create child process to execute cmd
+  pid = process_execute(cmd_line);
 
-    // get the created child
-    struct thread *child = get_child(pid, &parent -> children);
-    // wait this child until load
-    // semaphore problem 
-    //sema_down(&child ->  child_elem -> c_lock);
-    // after wake up check if child load successfully
-    if(child -> status != THREAD_READY)
-    {
-        //failed to load
-        return -1;
-    }
-    return pid;
+  // get the created child
+  struct thread *child = get_child(pid, &parent -> children);
+  // wait this child until load
+  // semaphore problem 
+  //sema_down(&child ->  child_elem -> c_lock);
+  // after wake up check if child load successfully
+  if(child -> status != THREAD_READY)
+  {
+    //failed to load
+    return -1;
+  }
+  return pid;
 }
 
 int wait (tid_t pid)
 {
-    return process_wait(pid);
+  return process_wait(pid);
 }
 
 int remove (const char *file)
 {
-    lock_acquire(&f_lock);
-    bool ret = filesys_remove(file);
-    lock_release(&f_lock);
-    if (ret == true) {
-      return 1;
-    } 
-    return 0;
+  lock_acquire(&f_lock);
+  bool ret = filesys_remove(file);
+  lock_release(&f_lock);
+  if (ret == true) {
+    return 1;
+  } 
+  return 0;
 }
 
 int open (const char *file)
 {
-    int ret = -1;
-    lock_acquire(&f_lock);
-    struct thread *cur = thread_current ();
-    struct file * opened_file = filesys_open(file);
-    lock_release(&f_lock);
-    if(opened_file != NULL)
-    {
-        cur->file_size = cur->file_size + 1;
-        ret = cur->file_size;
-        /*create and init new fd_element*/
-        struct file_info *file_d = (struct file_info*) malloc(sizeof(struct file_info));
-        file_d->fd = ret;
-        file_d->this_file = opened_file;
-        // add this fd_element to this thread fd_list
-        list_push_back(&cur->files, &file_d->file_elem);
-    }
-    return ret;
+  int ret = -1;
+  lock_acquire(&f_lock);
+  struct thread *cur = thread_current ();
+  struct file * opened_file = filesys_open(file);
+  lock_release(&f_lock);
+  if(opened_file != NULL)
+  {
+    cur->file_size = cur->file_size + 1;
+    ret = cur->file_size;
+    /*create and init new fd_element*/
+    struct file_info *file_d = (struct file_info*) malloc(sizeof(struct file_info));
+    file_d->fd = ret;
+    file_d->this_file = opened_file;
+    // add this fd_element to this thread fd_list
+    list_push_back(&cur->files, &file_d->file_elem);
+  }
+  return ret;
 }
 
 int filesize (int fd)
 {
-    struct file *myfile = get_file(fd)->this_file;
-    lock_acquire(&f_lock);
-    int ret = file_length(myfile);
-    lock_release(&f_lock);
-    return ret;
+  struct file *myfile = get_file(fd)->this_file;
+  lock_acquire(&f_lock);
+  int ret = file_length(myfile);
+  lock_release(&f_lock);
+  return ret;
 }
 
 int tell (int fd)
 {
-    struct file_info *fd_elem = get_file(fd);
-    if(fd_elem == NULL)
-    {
-        return -1;
-    }
-    struct file *myfile = fd_elem->this_file;
-    lock_acquire(&f_lock);
-    unsigned ret = file_tell(myfile);
-    lock_release(&f_lock);
-    return ret;
+  struct file_info *fd_elem = get_file(fd);
+  if(fd_elem == NULL)
+  {
+    return -1;
+  }
+  struct file *myfile = fd_elem->this_file;
+  lock_acquire(&f_lock);
+  unsigned ret = file_tell(myfile);
+  lock_release(&f_lock);
+  return ret;
 }
 
 int close (int fd)
 {
-    struct file_info *fd_elem = get_file(fd);
-    if(fd_elem == NULL)
-    {
-        return 0;
-    }
-    struct file *myfile = fd_elem->this_file;
-    lock_acquire(&f_lock);
-    file_close(myfile);
-    lock_release(&f_lock);
-    return 1;
+  struct file_info *fd_elem = get_file(fd);
+  if(fd_elem == NULL)
+  {
+    return 0;
+  }
+  struct file *myfile = fd_elem->this_file;
+  lock_acquire(&f_lock);
+  file_close(myfile);
+  lock_release(&f_lock);
+  return 1;
 }
 
 
