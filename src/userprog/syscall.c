@@ -18,7 +18,10 @@ static void syscall_handler (struct intr_frame *);
 void exit (int status);
 void write (struct intr_frame *f, int fd, const void *buffer, unsigned size);
 void read (struct intr_frame *f, int fd, const void *buffer, unsigned size);
+void create (struct intr_frame *f, const char *file, unsigned initial_size);
+void seek (int fd, unsigned position);
 void valid_ptr (const void *pointer);
+void call_with_2 (struct intr_frame *f, void *esp, int call);
 void call_with_3 (struct intr_frame *f, void *esp, int call);
 struct file_info* get_file (int fd);
 struct lock f_lock;
@@ -61,6 +64,24 @@ struct file_info* get_file (int fd)
   return NULL;
 }
 
+void call_with_2 (struct intr_frame *f, void *esp, int call)
+{
+  int argv = *((int*) esp);
+  esp += 4;
+  int arg1 = *((int*) esp);
+  esp += 4;
+
+  if (call == SYS_CREATE)
+  {
+    valid_ptr((const void *) argv);
+    create(f, (const char *) argv, (unsigned) arg1);
+  }
+  else if (call == SYS_SEEK)
+  {
+    seek(argv, (unsigned) arg1);
+  }
+}
+
 void call_with_3 (struct intr_frame *f, void *esp, int call)
 {
   int argv = *((int*) esp);
@@ -84,6 +105,29 @@ void exit (int status)
   //sema_up (&mutex);
   sema_up (&cur -> l_lock);
   thread_exit ();
+}
+
+void
+create (struct intr_frame *f, const char *file, unsigned initial_size)
+{
+  lock_acquire(&f_lock);
+  f->eax = filesys_create(file, initial_size);
+  lock_release(&f_lock);
+}
+
+void
+seek (int fd, unsigned position)
+{
+  struct file_info *file_elem = get_file(fd);
+  if (file_elem == NULL) 
+  {
+    return;
+  }
+
+  struct file *this_file = file_elem->this_file;
+  lock_acquire(&f_lock);
+  file_seek(this_file, position);
+  lock_release(&f_lock);
 }
 
 void
@@ -134,6 +178,12 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
   else if (number == SYS_WRITE) {
     call_with_3 (f, esp, SYS_WRITE);
+  }
+  else if (number == SYS_CREATE) {
+    call_with_2(f, esp, SYS_CREATE);
+  }
+  else if (number == SYS_SEEK) {
+    call_with_2(f, esp, SYS_SEEK);
   }
   else {
     shutdown_power_off ();
