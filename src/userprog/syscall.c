@@ -31,8 +31,6 @@ int remove (const char *file);
 int filesize (int fd);
 int tell (int fd);
 int close (int fd);
-
-
 struct file_info* get_file (int fd);
 struct lock f_lock;
 
