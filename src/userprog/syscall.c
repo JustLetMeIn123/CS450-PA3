@@ -241,18 +241,13 @@ exec (const char *cmd_line)
 {
   struct thread* parent = thread_current();
   tid_t pid = -1;
-  // create child process to execute cmd
   pid = process_execute(cmd_line);
-
-  // get the created child
+  //printf ("after process_execute is called\n");
   struct thread *child = get_child(pid, &parent -> children);
-  // wait this child until load
-  // semaphore problem 
-  //sema_down(&child ->  child_elem -> c_lock);
-  // after wake up check if child load successfully
+  //sema_down (&child->c_lock);
+  //printf ("%s\n", child->name);
   if(child -> status != THREAD_READY)
   {
-    //failed to load
     return -1;
   }
   return pid;
@@ -345,6 +340,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   int *esp = f->esp;
   valid_ptr ((const void *) esp);
   int number = *esp;
+  //printf ("Call: %d\n", number);
   esp += 1;
   valid_ptr ((const void *) esp);
   if (number == SYS_HALT) {

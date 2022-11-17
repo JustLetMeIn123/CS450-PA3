@@ -45,12 +45,25 @@ process_execute (const char *file_name)
   char *token = strtok_r (fn_copy2, " ", &buff);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
+  struct list_elem *e;
+  struct thread *curr = NULL;
+  for (e = list_begin (&thread_current()->children); e != list_end (&thread_current()->children); e = list_next (e))
+  {
+    struct thread* child = list_entry (e, struct thread, child_elem);
+    
+    if (child->tid == tid)
+      curr = child;
+  }
+  //printf ("created thread: %s\n", curr->name);
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   // wait for start_process to finish loading using a semaphore. If it does not, return -1
   sema_down (&thread_current()->c_lock);
+  //printf ("%s here\n", curr->name);
   if (!thread_current()->load)
     return -1;
+  //printf ("end of process_execute for: %s\n", curr->name);
   return tid;
 }
 
@@ -113,13 +126,30 @@ process_wait (tid_t child_tid UNUSED)
   if (child_tid == -1)
     return -1;
 
-  struct thread *child = get_child(child_tid, &thread_current()->children);
+  struct thread *child = get_child(child_tid, &thread_current()-> children);
+  struct list_elem *e;
+  e = list_begin (&thread_current()->children);
+  e = list_next (e);
+  struct thread *t = list_entry (e, struct thread, child_elem);
+  if (t != NULL && t->magic == 0xcd6abf4b)
+  {
+    //struct thread *child = NULL;
+    struct list_elem *e;
+    for (e = list_begin (&thread_current()->children); e != list_end (&thread_current()->children); e = list_next (e))
+    {
+      struct thread* c = list_entry (e, struct thread, child_elem);
+      if (c->tid == child_tid)
+        child = c;
+    }
+  }
   if (child == NULL)
     return -1;
+  //printf ("waiting on: %s\n", child->name);
   if (!child->wait_called)
   {
     child->wait_called = true;
     //sema_down (&mutex);
+    //if (child->status == THREAD_RUNNING || child->status == THREAD_READY)
     sema_down (&child -> l_lock);
     return child->status;
   }
@@ -132,7 +162,11 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
+  //sema_up (&cur -> l_lock);
+  if (cur -> curr_file != NULL)
+  {
+    file_allow_write(cur -> curr_file);
+  }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;

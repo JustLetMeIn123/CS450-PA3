@@ -100,7 +100,7 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-  list_init(&initial_thread->children);
+  //list_init(&initial_thread->children);
   initial_thread->parent = NULL;
 }
 
@@ -495,6 +495,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->curr_file = NULL;
   list_init (&t->files);
   t->magic = THREAD_MAGIC;
+  list_init(&t->children);
   sema_init(&t->c_lock, 0);
   sema_init(&t->l_lock, 0);
 
