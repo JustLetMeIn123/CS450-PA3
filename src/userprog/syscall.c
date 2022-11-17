@@ -31,8 +31,6 @@ int remove (const char *file);
 int filesize (int fd);
 int tell (int fd);
 int close (int fd);
-
-
 struct file_info* get_file (int fd);
 struct lock f_lock;
 
@@ -280,11 +278,9 @@ int open (const char *file)
   {
     cur->file_size = cur->file_size + 1;
     ret = cur->file_size;
-    /*create and init new fd_element*/
     struct file_info *file_d = (struct file_info*) malloc(sizeof(struct file_info));
     file_d->fd = ret;
     file_d->this_file = opened_file;
-    // add this fd_element to this thread fd_list
     list_push_back(&cur->files, &file_d->file_elem);
   }
   return ret;
