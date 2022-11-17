@@ -23,7 +23,7 @@ void read (struct intr_frame *f, int fd, void *buffer, unsigned size);
 void valid_ptr (const void *pointer);
 void call_with_2 (struct intr_frame *f, void *esp, int call);
 void call_with_3 (struct intr_frame *f, void *esp, int call);
-void call_with_1 (struct intr_frame *f, int choose, void *esp);
+void call_with_1 (struct intr_frame *f, void *esp, int call);
 int open (const char *file);
 tid_t exec (const char *cmd_line);
 int wait (tid_t pid);
@@ -47,7 +47,7 @@ void valid_ptr (const void *pointer)
     exit(-1);
 }
 
-struct thread* get_child(tid_t tid, struct list *threads)
+struct thread* get_child (tid_t tid, struct list *threads)
 {
   if (!is_user_vaddr ((const void*) threads))
     return NULL;
@@ -93,43 +93,43 @@ void call_with_2 (struct intr_frame *f, void *esp, int call)
   }
 }
 
-void call_with_1 (struct intr_frame *f, int choose, void *esp)
+void call_with_1 (struct intr_frame *f, void *esp, int call)
 {
   int argv = *((int*) esp);
   esp += 4;
 
-  if (choose == SYS_EXIT)
+  if (call == SYS_EXIT)
   {
     exit(argv);
   }
-  else if (choose == SYS_EXEC)
+  else if (call == SYS_EXEC)
   {
     valid_ptr((const void*) argv);
     f -> eax = exec((const char *)argv);
   }
-  else if (choose == SYS_WAIT)
+  else if (call == SYS_WAIT)
   {
     f -> eax = wait(argv);
   }
-  else if (choose == SYS_REMOVE)
+  else if (call == SYS_REMOVE)
   {
     valid_ptr((const void*) argv);
     f -> eax = remove((const char *) argv);
   }
-  else if(choose == SYS_OPEN)
+  else if(call == SYS_OPEN)
   {
     valid_ptr((const void*) argv);
     f -> eax = open((const char *) argv);
   }
-  else if (choose == SYS_FILESIZE)
+  else if (call == SYS_FILESIZE)
   {
     f -> eax = filesize(argv);
   }
-  else if (choose == SYS_TELL)
+  else if (call == SYS_TELL)
   {
     f -> eax = tell(argv);
   }
-  else if (choose == SYS_CLOSE)
+  else if (call == SYS_CLOSE)
   {
     close(argv);
   }
@@ -242,14 +242,15 @@ exec (const char *cmd_line)
   struct thread* parent = thread_current();
   tid_t pid = -1;
   pid = process_execute(cmd_line);
-  //printf ("after process_execute is called\n");
+  printf ("after process_execute is called\n");
   struct thread *child = get_child(pid, &parent -> children);
-  //sema_down (&child->c_lock);
-  //printf ("%s\n", child->name);
+  //sema_down (&child->l_lock);
+  printf ("THIS IS THE CHILD NAME %s I MADE IT PAST THE PAGE FAULT \n", child->name);
   if(child -> status != THREAD_READY)
   {
     return -1;
   }
+  printf("RIGHT BEFORE RETURN PID");
   return pid;
 }
 
@@ -261,9 +262,9 @@ int wait (tid_t pid)
 int remove (const char *file)
 {
   lock_acquire(&f_lock);
-  bool ret = filesys_remove(file);
+  bool val = filesys_remove(file);
   lock_release(&f_lock);
-  if (ret == true) {
+  if (val == true) {
     return 1;
   } 
   return 0;
@@ -271,32 +272,32 @@ int remove (const char *file)
 
 int open (const char *file)
 {
-  int ret = -1;
+  int val = -1;
   lock_acquire(&f_lock);
-  struct thread *cur = thread_current ();
-  struct file * opened_file = filesys_open(file);
+  struct thread *current = thread_current ();
+  struct file * open_file = filesys_open(file);
   lock_release(&f_lock);
-  if(opened_file != NULL)
+  if(open_file != NULL)
   {
-    cur->file_size = cur->file_size + 1;
-    ret = cur->file_size;
+    current->file_size = current->file_size + 1;
+    val = current->file_size;
     /*create and init new fd_element*/
-    struct file_info *file_d = (struct file_info*) malloc(sizeof(struct file_info));
-    file_d->fd = ret;
-    file_d->this_file = opened_file;
+    struct file_info *fd_elem = (struct file_info*) malloc(sizeof(struct file_info));
+    fd_elem->fd = val;
+    fd_elem->this_file = open_file;
     // add this fd_element to this thread fd_list
-    list_push_back(&cur->files, &file_d->file_elem);
+    list_push_back(&current->files, &fd_elem->file_elem);
   }
-  return ret;
+  return val;
 }
 
 int filesize (int fd)
 {
-  struct file *myfile = get_file(fd)->this_file;
+  struct file *thisfile = get_file(fd)->this_file;
   lock_acquire(&f_lock);
-  int ret = file_length(myfile);
+  int val = file_length(thisfile);
   lock_release(&f_lock);
-  return ret;
+  return val;
 }
 
 int tell (int fd)
@@ -306,11 +307,11 @@ int tell (int fd)
   {
     return -1;
   }
-  struct file *myfile = fd_elem->this_file;
+  struct file *thisfile = fd_elem->this_file;
   lock_acquire(&f_lock);
-  unsigned ret = file_tell(myfile);
+  unsigned val = file_tell(thisfile);
   lock_release(&f_lock);
-  return ret;
+  return val;
 }
 
 int close (int fd)
@@ -320,9 +321,9 @@ int close (int fd)
   {
     return 0;
   }
-  struct file *myfile = fd_elem->this_file;
+  struct file *thisfile = fd_elem->this_file;
   lock_acquire(&f_lock);
-  file_close(myfile);
+  file_close(thisfile);
   lock_release(&f_lock);
   return 1;
 }
@@ -353,27 +354,27 @@ syscall_handler (struct intr_frame *f UNUSED)
     call_with_3 (f, esp, SYS_WRITE);
   } 
   else if (number == SYS_EXIT) {
-    call_with_1(f, SYS_EXIT,esp);
+    call_with_1(f, esp, SYS_EXIT);
   } 
   else if (number == SYS_EXEC) {
-    call_with_1(f, SYS_EXEC,esp);
+    call_with_1(f, esp, SYS_EXEC);
   } 
   else if (number == SYS_WAIT) {
-    call_with_1(f, SYS_WAIT,esp);
+    call_with_1(f, esp, SYS_WAIT);
   } 
   else if (number == SYS_REMOVE) {
-    call_with_1(f, SYS_REMOVE,esp);
+    call_with_1(f, esp, SYS_REMOVE);
   } 
   else if (number == SYS_OPEN) {
-    call_with_1(f, SYS_OPEN,esp);
+    call_with_1(f, esp, SYS_OPEN);
   } 
   else if (number == SYS_FILESIZE) {
-    call_with_1(f, SYS_FILESIZE,esp);
+    call_with_1(f, esp, SYS_FILESIZE);
   } 
   else if (number == SYS_TELL) {
-    call_with_1(f, SYS_TELL,esp);
+    call_with_1(f, esp, SYS_TELL);
   } else if(number == SYS_CLOSE) {
-    call_with_1(f, SYS_CLOSE, esp);
+    call_with_1(f, esp, SYS_CLOSE);
   }
   else if (number == SYS_CREATE) {
     call_with_2(f, esp, SYS_CREATE);
