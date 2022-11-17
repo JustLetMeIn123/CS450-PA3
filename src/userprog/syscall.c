@@ -21,9 +21,7 @@ void seek (int fd, unsigned position);
 void write (struct intr_frame *f, int fd, void *buffer, unsigned size);
 void read (struct intr_frame *f, int fd, void *buffer, unsigned size);
 void valid_ptr (const void *pointer);
-void call_with_2 (struct intr_frame *f, void *esp, int call);
-void call_with_3 (struct intr_frame *f, void *esp, int call);
-void call_with_1 (struct intr_frame *f, void *esp, int call);
+void callArgs (struct intr_frame *f, void *esp, int call);
 int open (const char *file);
 tid_t exec (const char *cmd_line);
 int wait (tid_t pid);
@@ -73,72 +71,69 @@ struct file_info* get_file (int fd)
   return NULL;
 }
 
-void call_with_2 (struct intr_frame *f, void *esp, int call)
-{
-  int argv = *((int*) esp);
-  esp += 4;
-  int arg1 = *((int*) esp);
-  esp += 4;
-
-  if (call == SYS_CREATE)
-  {
-    valid_ptr((const void *) argv);
-    create(f, (const char *) argv, (unsigned) arg1);
-  }
-  else if (call == SYS_SEEK)
-  {
-    seek(argv, (unsigned) arg1);
-  }
-}
-
-void call_with_1 (struct intr_frame *f, void *esp, int call)
-{
+void callArgs (struct intr_frame *f, void *esp, int call) {
   int argv = *((int*) esp);
   esp += 4;
 
   if (call == SYS_EXIT)
   {
     exit(argv);
+    return;
   }
   else if (call == SYS_EXEC)
   {
     valid_ptr((const void*) argv);
     f -> eax = exec((const char *)argv);
+    return;
   }
   else if (call == SYS_WAIT)
   {
     f -> eax = wait(argv);
+    return;
   }
   else if (call == SYS_REMOVE)
   {
     valid_ptr((const void*) argv);
     f -> eax = remove((const char *) argv);
+    return;
   }
   else if(call == SYS_OPEN)
   {
     valid_ptr((const void*) argv);
     f -> eax = open((const char *) argv);
+    return;
   }
   else if (call == SYS_FILESIZE)
   {
     f -> eax = filesize(argv);
+    return;
   }
   else if (call == SYS_TELL)
   {
     f -> eax = tell(argv);
+    return;
   }
   else if (call == SYS_CLOSE)
   {
     close(argv);
+    return;
   }
-}
-
-void call_with_3 (struct intr_frame *f, void *esp, int call)
-{
-  int argv = *((int*) esp);
-  esp += 4;
+  
   int arg1 = *((int*) esp);
   esp += 4;
+  
+  if (call == SYS_CREATE)
+  {
+    valid_ptr((const void *) argv);
+    create(f, (const char *) argv, (unsigned) arg1);
+    return;
+  }
+  else if (call == SYS_SEEK)
+  {
+    seek(argv, (unsigned) arg1);
+    return;
+  }
+
   int arg2 = *((int*) esp);
   esp += 4;
 
@@ -147,6 +142,7 @@ void call_with_3 (struct intr_frame *f, void *esp, int call)
     write (f, argv, (void *) arg1, (unsigned) arg2);
   else
     read (f, argv, (void *) arg1, (unsigned) arg2);
+
 }
 
 void exit (int status)
@@ -281,11 +277,9 @@ int open (const char *file)
   {
     current->file_size = current->file_size + 1;
     val = current->file_size;
-    /*create and init new fd_element*/
     struct file_info *fd_elem = (struct file_info*) malloc(sizeof(struct file_info));
     fd_elem->fd = val;
     fd_elem->this_file = open_file;
-    // add this fd_element to this thread fd_list
     list_push_back(&current->files, &fd_elem->file_elem);
   }
   return val;
@@ -348,39 +342,39 @@ syscall_handler (struct intr_frame *f UNUSED)
     shutdown_power_off();
   }
   else if (number == SYS_READ) {
-    call_with_3 (f, esp, SYS_READ);
+    callArgs(f, esp, SYS_READ);
   }
   else if (number == SYS_WRITE) {
-    call_with_3 (f, esp, SYS_WRITE);
+    callArgs(f, esp, SYS_WRITE);
   } 
   else if (number == SYS_EXIT) {
-    call_with_1(f, esp, SYS_EXIT);
+    callArgs(f, esp, SYS_EXIT);
   } 
   else if (number == SYS_EXEC) {
-    call_with_1(f, esp, SYS_EXEC);
+    callArgs(f, esp, SYS_EXEC);
   } 
   else if (number == SYS_WAIT) {
-    call_with_1(f, esp, SYS_WAIT);
+    callArgs(f, esp, SYS_WAIT);
   } 
   else if (number == SYS_REMOVE) {
-    call_with_1(f, esp, SYS_REMOVE);
+    callArgs(f, esp, SYS_REMOVE);
   } 
   else if (number == SYS_OPEN) {
-    call_with_1(f, esp, SYS_OPEN);
+    callArgs(f, esp, SYS_OPEN);
   } 
   else if (number == SYS_FILESIZE) {
-    call_with_1(f, esp, SYS_FILESIZE);
+    callArgs(f, esp, SYS_FILESIZE);
   } 
   else if (number == SYS_TELL) {
-    call_with_1(f, esp, SYS_TELL);
+    callArgs(f, esp, SYS_TELL);
   } else if(number == SYS_CLOSE) {
-    call_with_1(f, esp, SYS_CLOSE);
+    callArgs(f, esp, SYS_CLOSE);
   }
   else if (number == SYS_CREATE) {
-    call_with_2(f, esp, SYS_CREATE);
+    callArgs(f, esp, SYS_CREATE);
   }
   else if (number == SYS_SEEK) {
-    call_with_2(f, esp, SYS_SEEK);
+    callArgs(f, esp, SYS_SEEK);
   }
   else {
     shutdown_power_off ();
