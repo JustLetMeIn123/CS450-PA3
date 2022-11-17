@@ -152,6 +152,8 @@ void call_with_3 (struct intr_frame *f, void *esp, int call)
 void exit (int status)
 {
   struct thread *cur = thread_current ();
+  if (cur->parent != NULL)
+    cur->parent->exit_status = status;
   printf ("%s: exit(%d)\n", cur->name, status);
   //sema_up (&mutex);
   sema_up (&cur -> l_lock);
@@ -237,19 +239,10 @@ write (struct intr_frame *f, int fd, void *buffer, unsigned size)
 tid_t
 exec (const char *cmd_line)
 {
-  struct thread* parent = thread_current();
-  tid_t pid = -1;
-  pid = process_execute(cmd_line);
-  printf ("after process_execute is called\n");
-  struct thread *child = get_child(pid, &parent -> children);
-  //sema_down (&child->l_lock);
-  printf ("THIS IS THE CHILD NAME %s I MADE IT PAST THE PAGE FAULT \n", child->name);
-  if(child -> status != THREAD_READY)
-  {
-    return -1;
-  }
-  printf("RIGHT BEFORE RETURN PID");
-  return pid;
+  //struct thread* parent = thread_current();
+  //tid_t pid = -1;
+  //pid = process_execute(cmd_line);
+  return process_execute(cmd_line);
 }
 
 int wait (tid_t pid)

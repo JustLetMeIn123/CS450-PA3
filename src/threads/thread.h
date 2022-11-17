@@ -105,6 +105,7 @@ struct thread
     int64_t wait_time;
     struct list files;
     int file_size;
+    int exit_status;
     struct file *curr_file;
 
 #ifdef USERPROG

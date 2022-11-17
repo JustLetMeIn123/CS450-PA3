@@ -45,16 +45,6 @@ process_execute (const char *file_name)
   char *token = strtok_r (fn_copy2, " ", &buff);
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (token, PRI_DEFAULT, start_process, fn_copy);
-  struct list_elem *e;
-  struct thread *curr = NULL;
-  for (e = list_begin (&thread_current()->children); e != list_end (&thread_current()->children); e = list_next (e))
-  {
-    struct thread* child = list_entry (e, struct thread, child_elem);
-    
-    if (child->tid == tid)
-      curr = child;
-  }
-  //printf ("created thread: %s\n", curr->name);
 
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
@@ -129,8 +119,11 @@ process_wait (tid_t child_tid UNUSED)
   struct thread *child = get_child(child_tid, &thread_current()-> children);
   struct list_elem *e;
   e = list_begin (&thread_current()->children);
-  e = list_next (e);
   struct thread *t = list_entry (e, struct thread, child_elem);
+  if (t->magic != 0xcd6abf4b)
+    return -1;
+  e = list_next (e);
+  t = list_entry (e, struct thread, child_elem);
   if (t != NULL && t->magic == 0xcd6abf4b)
   {
     //struct thread *child = NULL;
