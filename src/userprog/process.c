@@ -121,7 +121,7 @@ process_wait (tid_t child_tid UNUSED)
   e = list_begin (&thread_current()->children);
   struct thread *t = list_entry (e, struct thread, child_elem);
   if (t->magic != 0xcd6abf4b)
-    return -1;
+    return thread_current() -> exit_status;
   e = list_next (e);
   t = list_entry (e, struct thread, child_elem);
   if (t != NULL && t->magic == 0xcd6abf4b)

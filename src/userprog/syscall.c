@@ -152,8 +152,17 @@ void call_with_3 (struct intr_frame *f, void *esp, int call)
 void exit (int status)
 {
   struct thread *cur = thread_current ();
-  if (cur->parent != NULL)
-    cur->parent->exit_status = status;
+  struct list_elem *e;
+  struct thread *child = NULL;
+  for (e = list_begin (&cur->parent->children); e != list_end (&cur->parent->children); e = list_next (e))
+  {
+    struct thread *c = list_entry (e, struct thread, child_elem);
+    
+    if(c->tid == cur->tid)
+      child = c;
+  }
+  if (child != NULL)
+    child -> parent -> exit_status = status;
   printf ("%s: exit(%d)\n", cur->name, status);
   //sema_up (&mutex);
   sema_up (&cur -> l_lock);
