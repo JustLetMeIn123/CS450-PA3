@@ -143,7 +143,8 @@ void callArgs (struct intr_frame *f, void *esp, int call) {
 
 }
 
-void exit (int status)
+void
+exit (int status)
 {
   struct thread *cur = thread_current ();
   struct list_elem *e;
@@ -174,13 +175,10 @@ create (struct intr_frame *f, const char *file, unsigned initial_size)
 void
 seek (int fd, unsigned position)
 {
-  struct file_info *file_elem = get_file(fd);
-  if (file_elem == NULL) 
-  {
+  struct file_info *fileI = get_file(fd);
+  if (fileI == NULL) 
     return;
-  }
-
-  struct file *this_file = file_elem->this_file;
+  struct file *this_file = fileI->this_file;
   lock_acquire(&f_lock);
   file_seek(this_file, position);
   lock_release(&f_lock);
@@ -242,11 +240,10 @@ write (struct intr_frame *f, int fd, void *buffer, unsigned size)
 int remove (const char *file)
 {
   lock_acquire(&f_lock);
-  bool val = filesys_remove(file);
+  bool ret = filesys_remove(file);
   lock_release(&f_lock);
-  if (val == true) {
+  if (ret == true)
     return 1;
-  } 
   return 0;
 }
 
@@ -255,16 +252,16 @@ int open (const char *file)
   int ret = -1;
   lock_acquire(&f_lock);
   struct thread *current = thread_current ();
-  struct file * open_file = filesys_open(file);
+  struct file *curr_file = filesys_open(file);
   lock_release(&f_lock);
-  if(open_file != NULL)
+  if(curr_file != NULL)
   {
     current->file_size = current->file_size + 1;
     ret = current->file_size;
-    struct file_info *fd_elem = (struct file_info*) malloc(sizeof(struct file_info));
-    fd_elem->fd = ret;
-    fd_elem->this_file = open_file;
-    list_push_back(&current->files, &fd_elem->file_elem);
+    struct file_info *fileI = (struct file_info*) malloc(sizeof(struct file_info));
+    fileI->fd = ret;
+    fileI->this_file = curr_file;
+    list_push_back(&current->files, &fileI->file_elem);
   }
   return ret;
 }
@@ -280,26 +277,22 @@ int filesize (int fd)
 
 int tell (int fd)
 {
-  struct file_info *fd_elem = get_file(fd);
-  if(fd_elem == NULL)
-  {
+  struct file_info *fileI = get_file(fd);
+  if(fileI == NULL)
     return -1;
-  }
-  struct file *thisfile = fd_elem->this_file;
+  struct file *thisfile = fileI->this_file;
   lock_acquire(&f_lock);
-  unsigned val = file_tell(thisfile);
+  unsigned ret = file_tell(thisfile);
   lock_release(&f_lock);
-  return val;
+  return ret;
 }
 
 int close (int fd)
 {
-  struct file_info *fd_elem = get_file(fd);
-  if(fd_elem == NULL)
-  {
+  struct file_info *fileI = get_file(fd);
+  if(fileI == NULL)
     return 0;
-  }
-  struct file *thisfile = fd_elem->this_file;
+  struct file *thisfile = fileI->this_file;
   lock_acquire(&f_lock);
   file_close(thisfile);
   lock_release(&f_lock);
