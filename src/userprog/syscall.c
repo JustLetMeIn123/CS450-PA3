@@ -23,8 +23,6 @@ void read (struct intr_frame *f, int fd, void *buffer, unsigned size);
 void valid_ptr (const void *pointer);
 void callArgs (struct intr_frame *f, void *esp, int call);
 int open (const char *file);
-tid_t exec (const char *cmd_line);
-int wait (tid_t pid);
 int remove (const char *file);
 int filesize (int fd);
 int tell (int fd);
@@ -83,12 +81,12 @@ void callArgs (struct intr_frame *f, void *esp, int call) {
   else if (call == SYS_EXEC)
   {
     valid_ptr((const void*) argv);
-    f -> eax = exec((const char *)argv);
+    f -> eax = process_execute((const char *)argv);
     return;
   }
   else if (call == SYS_WAIT)
   {
-    f -> eax = wait(argv);
+    f -> eax = process_wait(argv);
     return;
   }
   else if (call == SYS_REMOVE)
@@ -241,20 +239,6 @@ write (struct intr_frame *f, int fd, void *buffer, unsigned size)
   }
 }
 
-tid_t
-exec (const char *cmd_line)
-{
-  //struct thread* parent = thread_current();
-  //tid_t pid = -1;
-  //pid = process_execute(cmd_line);
-  return process_execute(cmd_line);
-}
-
-int wait (tid_t pid)
-{
-  return process_wait(pid);
-}
-
 int remove (const char *file)
 {
   lock_acquire(&f_lock);
@@ -268,7 +252,7 @@ int remove (const char *file)
 
 int open (const char *file)
 {
-  int val = -1;
+  int ret = -1;
   lock_acquire(&f_lock);
   struct thread *current = thread_current ();
   struct file * open_file = filesys_open(file);
@@ -276,13 +260,13 @@ int open (const char *file)
   if(open_file != NULL)
   {
     current->file_size = current->file_size + 1;
-    val = current->file_size;
+    ret = current->file_size;
     struct file_info *fd_elem = (struct file_info*) malloc(sizeof(struct file_info));
-    fd_elem->fd = val;
+    fd_elem->fd = ret;
     fd_elem->this_file = open_file;
     list_push_back(&current->files, &fd_elem->file_elem);
   }
-  return val;
+  return ret;
 }
 
 int filesize (int fd)
