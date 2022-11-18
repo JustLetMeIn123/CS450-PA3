@@ -29,7 +29,8 @@ Alex Cronin <croninja@dukes.jmu.edu>
 >> A1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
-	thread.h in thread struct:
+
+thread.h in thread struct:
 struct list files; -keeps tracks of all the files for that thread.
 int file_size; -keeps track of how many files are associated with that thread
 int exit_status; -keeps track of the most recent exit status of this thread's child thread.
@@ -42,7 +43,8 @@ int fd;
 struct file *this_file;
 struct list_elem file_elem;
 };
-- helper struct used to store useful information for a file such as the file descriptor and a list_elem to allow a list to be created consisting of file_info elements.
+- helper struct used to store useful information for a file such as the file descriptor and a 
+list_elem to allow a list to be created consisting of file_info elements.
  
 syscall.c:
 struct lock f_lock; -the lock to ensure file manipulation doesn’t occur multiple times at once.
@@ -50,18 +52,38 @@ struct lock f_lock; -the lock to ensure file manipulation doesn’t occur multip
 >> A2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
-A file descriptor is used to keep track of the open files. When you call the open system call, it returns a non-negative number if the file was able to be opened (-1 if not) other than 0 (STDIN) or 1(STDOUT). When a file is opened more than once, it will receive another file descriptor which will be closed independently by multiple calls to close or by terminating the process. Calling close on a file closes its file descriptor meaning the file is no longer open. Furthermore, Each process has a unique set of file descriptors, file descriptors are not unique within the entire OS but rather just within each individual process. 
+
+A file descriptor is used to keep track of the open files. When you call the open system call, 
+it returns a non-negative number if the file was able to be opened (-1 if not) other than 
+0 (STDIN) or 1(STDOUT). When a file is opened more than once, it will receive another file descriptor
+which will be closed independently by multiple calls to close or by terminating the process. 
+Calling close on a file closes its file descriptor meaning the file is no longer open. Furthermore, 
+Each process has a unique set of file descriptors, file descriptors are not unique within the entire 
+OS but rather just within each individual process. 
 
 ---- ALGORITHMS ----
 
 >> A3: Describe your code for reading and writing user data from the
 >> kernel.
-	Our functions we created for reading and writing are basically the same. We use a helper method that finds the file with the given file descriptor we want from the first system call argument, lock the global ‘lock’ to ensure file manipulation is not happening anywhere else, then call file_read or file_write depending on the system call using the file we obtained from the helper method, the second system call argument as the buffer and the third system call argument as the size.
+
+Our functions we created for reading and writing are basically the same. We use a helper 
+method that finds the file with the given file descriptor we want from the first system 
+call argument, lock the global ‘lock’ to ensure file manipulation is not happening anywhere 
+else, then call file_read or file_write depending on the system call using the file we obtained 
+from the helper method, the second system call argument as the buffer and the third system 
+call argument as the size.
 
 
 >> A4: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
-	The wait system call calls our process_wait() method in process.c. The process_wait() method finds the child in the current_thread() list with the corresponding tid and decrements a semaphore within that thread to signal it is waiting for exit() to be called, as there is a corresponding sema_up() to the same semaphore in exit(). Before this happens we do error checking to make sure there are children in the thread’s list, and if there aren’t we return the most recent exit_status of that thread.
+
+The wait system call calls our process_wait() method in process.c. 
+The process_wait() method finds the child in the current_thread() list
+with the corresponding tid and decrements a semaphore within that thread 
+to signal it is waiting for exit() to be called, as there is a corresponding 
+sema_up() to the same semaphore in exit(). Before this happens we do error
+ checking to make sure there are children in the thread’s list, and if there
+aren’t we return the most recent exit_status of that thread.
 
 >> A5: Any access to user program memory at a user-specified address
 >> can fail due to a bad pointer value.  Such accesses must cause the
@@ -77,10 +99,29 @@ A file descriptor is used to keep track of the open files. When you call the ope
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
 
-Throughout the different components and aspects of our program, we found it a challenge to produce a solution that would not obscure the primary function of the code while also making sure that the error handling was performed concisely and efficiently. Our design idea was to create helper functions to produce a concise and efficient code that would enable us to perform error checking in various different functions. Modularizing our code in this way allowed us to have an easier time debugging our code because we could trace the flow of execution and isolate where the problem could potentially be. 
-A very important function that helped us with our design was valid_ptr. We designed this function with two different components in mind. We first checked to see if the user address was valid by calling is_user_valid and evaluating the resulting output. If the function evaluates to false then we exit because we know that our pointer is not a user virtual address. The second component of our valid_ptr function was to call pagedir_get_page and assign the result to our check variable. The point of calling pagedir_get_page was to ensure that the user address is unmapped properly since it looks up the physical address that corresponds to the user virtual address. 
-Unfortunately, we were not able to free allocated resources because we utilized all of our time towards our system calls and ensuring that they were functioning properly. We should have delegated tasks and managed our time more efficiently. We will be sure to do that on the next project. 
-An example of us utilizing strategies to overcome the error handling issue can be seen in our read and write system calls. In both functions we checked the validity of our file descriptor and examined both the buffer and file to make sure that they were not NULL. We incorporated other forms of error checking such as the file_read method calls. We called the previously mentioned valid_ptr helper function for error checking in our syscall_handler. It is this style of error checking that we incorporated into our system calls as well as their respective functions that serve as examples of our strategic design.  
+	Throughout the different components and aspects of our program, we found it a challenge to produce a 
+solution that would not obscure the primary function of the code while also making sure that the error 
+handling was performed concisely and efficiently. Our design idea was to create helper functions to 
+produce a concise and efficient code that would enable us to perform error checking in various different 
+functions. Modularizing our code in this way allowed us to have an easier time debugging our code 
+because we could trace the flow of execution and isolate where the problem could potentially be. 
+	A very important function that helped us with our design was valid_ptr. We designed this function 
+with two different components in mind. We first checked to see if the user address was valid by calling
+is_user_valid and evaluating the resulting output. If the function evaluates to false then we exit
+because we know that our pointer is not a user virtual address. The second component of our valid_ptr 
+function was to call pagedir_get_page and assign the result to our check variable. The point of calling 
+pagedir_get_page was to ensure that the user address is unmapped properly since it looks up the physical 
+address that corresponds to the user virtual address. 
+	Unfortunately, we were not able to free allocated resources because we utilized all of our time 
+towards our system calls and ensuring that they were functioning properly. We should have delegated tasks 
+and managed our time more efficiently. We will be sure to do that on the next project.
+ 	An example of us utilizing strategies to overcome the error handling issue can be seen in our 
+read and write system calls. In both functions we checked the validity of our file descriptor and 
+examined both the buffer and file to make sure that they were not NULL. We incorporated other forms 
+of error checking such as the file_read method calls. We called the previously mentioned valid_ptr 
+helper function for error checking in our syscall_handler. It is this style of error checking that we 
+incorporated into our system calls as well as their respective functions that serve as examples of our
+strategic design.  
 
 ---- SYNCHRONIZATION ----
 
@@ -88,7 +129,14 @@ An example of us utilizing strategies to overcome the error handling issue can b
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
-	We accomplish this with a semaphore in each thread called ‘c_lock’ and a boolean variable in each thread called ‘load.’ When load() is finished in start_process(), the result is stored in the ‘load’ variable of the thread and ‘c_lock’ is incremented to notify process_execute() that load() is completed (the ‘c_lock’ is decremented in process_execute()). Then in process_execute() the ‘load’ variable is checked to see if load() was successful or not.
+
+We accomplish this with a semaphore in each thread called ‘c_lock’ and a 
+boolean variable in each thread called ‘load.’ When load() is finished in 
+start_process(), the result is stored in the ‘load’ variable of the thread 
+and ‘c_lock’ is incremented to notify process_execute() that load() is 
+completed (the ‘c_lock’ is decremented in process_execute()). Then in 
+process_execute() the ‘load’ variable is checked to see if load() 
+was successful or not.
 
 >> A7: Consider parent process P with child process C.  How do you
 >> ensure proper synchronization and avoid race conditions when P
@@ -96,14 +144,28 @@ An example of us utilizing strategies to overcome the error handling issue can b
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
-	In order to ensure proper synchronization and avoiding race conditions we supply each thread with their own semaphore and variables such that threads aren’t accessing the same thing. If we have global variables we use locks to make sure it’s not being accessed by two things at once. However, we do not ensure that all resources are freed in each case because we did not have the time to implement this feature.
+
+In order to ensure proper synchronization and avoiding race conditions we 
+supply each thread with their own semaphore and variables such that threads 
+aren’t accessing the same thing. If we have global variables we use locks to 
+make sure it’s not being accessed by two things at once. However, we do not 
+ensure that all resources are freed in each case because we did not have the 
+time to implement this feature.
 
 ---- RATIONALE ----
 
 >> A8: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
-	We chose to implement access to user memory the way we did because it was similar to how we initially started to implement system calls in project 2. We just expanded the functionality and utilized some already implemented pintos functions to accomplish things like file reading and writing.
+
+We chose to implement access to user memory the way we did because 
+it was similar to how we initially started to implement system calls 
+in project 2. We just expanded the functionality and utilized some already 
+implemented pintos functions to accomplish things like file reading and writing.
 
 >> A9: What advantages or disadvantages can you see to your design
 >> for file descriptors?
-	Advantages; look up time and organization. With each thread having their own list of file descriptors it is easy to access files associated with processes. Disadvantages; memory space. Each thread has to initialize a list to keep track of their file descriptors.
+
+Advantages; look up time and organization. With each thread having
+their own list of file descriptors it is easy to access files associated 
+with processes. Disadvantages; memory space. Each thread has to initialize 
+a list to keep track of their file descriptors.
